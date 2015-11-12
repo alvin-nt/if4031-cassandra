@@ -13,6 +13,19 @@ repositories {
     mavenCentral()
 }
 
+// create a single Jar with all dependencies
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'Cassandra-tweet',
+                'Implementation-Version': version,
+                'Main-Class': 'Main'
+    }
+    baseName = project.name + '-all'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+
+    with jar
+}
+
 task initSourceFolders << { // add << before { to prevent executing during configuration phase
     sourceSets*.java.srcDirs*.each { it.mkdirs() }
     sourceSets*.resources.srcDirs*.each { it.mkdirs() }

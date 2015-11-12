@@ -1,44 +1,38 @@
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URL;
+import java.io.*;
+import java.util.Scanner;
 
 /**
  * Created by alvin on 11/12/15.
  */
 public class HelpCommand implements Command {
-    private static final File helpFile;
+    private static String helpOutput;
 
     static {
         ClassLoader loader = HelpCommand.class.getClassLoader();
         if (loader != null) {
-            URL url = loader.getResource("help.txt");
+            InputStream resource = loader.getResourceAsStream("help.txt");
 
-            if (url != null) {
-                helpFile = new File(url.getFile());
-            } else {
-                helpFile = null;
+            if (resource != null) {
+                Scanner scanner = new Scanner(resource).useDelimiter("\\A");
+                helpOutput = scanner.hasNext() ? scanner.next() : "";
+
+                scanner.close();
+                try {
+                    resource.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         } else {
-            helpFile = null;
+            helpOutput = null;
         }
     }
 
     private String showHelp() {
         // load the help.txt, or just show the hardcoded default help
         String output;
-        if (helpFile != null) {
-            try (FileInputStream fis = new FileInputStream(helpFile)) {
-                byte[] data = new byte[(int) helpFile.length()];
-                fis.read(data);
-
-                fis.close();
-                output = new String(data, "UTF-8");
-            } catch (IOException e) {
-                e.printStackTrace();
-                output = "[HELP NOT AVAILABLE]";
-            }
+        if (helpOutput != null) {
+            output = helpOutput;
         } else {
             output = "If no \"/\" supplied, it is assumed that you want to send a tweet.\n" +
                     "\n" +

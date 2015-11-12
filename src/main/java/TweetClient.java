@@ -5,7 +5,9 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Scanner;
 import java.util.logging.Logger;
 
 /**
@@ -75,21 +77,18 @@ public class TweetClient implements Closeable {
 
     private void initTables() throws IOException {
         ClassLoader loader = getClass().getClassLoader();
-        URL resource = loader.getResource("table-schema.cql");
+        InputStream resource = loader.getResourceAsStream("table-schema.cql");
         if (resource == null) {
             throw new IOException("Schema file does not exist!");
         }
 
-        String schema;
-        File schemaFile = new File(resource.getFile());
-        try (FileInputStream fis = new FileInputStream(schemaFile)) {
-            byte[] data = new byte[(int) schemaFile.length()];
-            fis.read(data);
+        Scanner scanner = new Scanner(resource).useDelimiter("\\A");
+        String buffer = scanner.hasNext() ? scanner.next() : "";
 
-            fis.close();
-            schema = new String(data, "UTF-8");
-        }
-        String tables[] = schema.split("[\\n\\r|\\n|\\r]{2}");
+        scanner.close();
+        resource.close();
+
+        String tables[] = buffer.split("[\\n\\r|\\n|\\r]{2}");
 
         for (String table : tables) {
             // Logger.getLogger(getClass().getName()).log(Level.INFO, "Executing;\n " + table);
