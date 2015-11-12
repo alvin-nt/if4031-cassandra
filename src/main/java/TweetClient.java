@@ -6,13 +6,14 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.*;
 import java.net.URL;
 import java.util.Arrays;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Created by Alvin Natawiguna on 11/11/2015.
  */
 public class TweetClient implements Closeable {
+    private static final Logger LOGGER = Logger.getLogger(TweetClient.class.getName());
+
     public static final int STATE_CLOSED = -1;
     public static final int STATE_NOUSER = 1;
     public static final int STATE_OK = 0;
@@ -76,7 +77,7 @@ public class TweetClient implements Closeable {
         ClassLoader loader = getClass().getClassLoader();
         URL resource = loader.getResource("table-schema.cql");
         if (resource == null) {
-            throw new IOException("Schema file does not exists!");
+            throw new IOException("Schema file does not exist!");
         }
 
         String schema;
@@ -96,7 +97,9 @@ public class TweetClient implements Closeable {
         }
     }
 
-    public void processCommand(String query) throws Exception {
+    public void processCommand(String query)
+            throws IllegalArgumentException, IllegalStateException, IOException
+    {
         Command command;
         String trimmedQuery = query.trim();
 
@@ -134,14 +137,22 @@ public class TweetClient implements Closeable {
                     command.execute();
                     break;
                 case "show":
-                    if (tokens.length < 3) {
-                        throw new IllegalArgumentException("Too few arguments for show command (minimum 3).");
+                    if (tokens.length < 2) {
+                        throw new IllegalArgumentException("Too few arguments for show command (minimum 2).");
                     }
                     String showType = tokens[1];
-                    String userToShow = tokens[2];
+                    String userToShow;
+
+                    if (tokens.length >= 3) {
+                        userToShow = tokens[2];
+                    } else {
+                        userToShow = username;
+                    }
 
                     command = new ShowCommand(this, showType, userToShow);
                     command.execute();
+
+                    System.out.println(((CommandWithResult)command).getResult());
                     break;
                 case "login":
                     if (state == STATE_OK) {
@@ -193,6 +204,10 @@ public class TweetClient implements Closeable {
             }
         } else {
             // assume that the user wants to send a tweet instead
+            if (state != STATE_OK) {
+                throw new IllegalStateException("You are not logged in!");
+            }
+
             command = new TweetCommand(this, query);
             command.execute();
         }

@@ -9,7 +9,7 @@ public class ExitCommand implements Command {
     }
 
     @Override
-    public void execute() {
+    public void execute() throws CommandException {
         client.close();
         client.state(TweetClient.STATE_CLOSED);
     }

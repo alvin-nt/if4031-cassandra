@@ -21,7 +21,7 @@ public class TweetCommand implements Command {
     }
 
     @Override
-    public void execute() {
+    public void execute() throws CommandException {
         Session session = client.session();
         String username = client.username();
         BatchStatement statements = new BatchStatement();
@@ -64,7 +64,7 @@ public class TweetCommand implements Command {
         // step 6: add the tweet to each of the follower's timeline
         List<Row> followers = followersResult.all();
         for (Row row: followers) {
-            String follower = row.getString("username");
+            String follower = row.getString("follower");
             BoundStatement followerStatement = new BoundStatement(
                     session.prepare("INSERT INTO userline (username, time, tweet_id) VALUES (?,?,?)")
             );

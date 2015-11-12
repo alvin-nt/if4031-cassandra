@@ -1,8 +1,6 @@
 import com.datastax.driver.core.*;
 import org.mindrot.jbcrypt.BCrypt;
 
-import java.util.List;
-
 /**
  * Created by alvin on 11/12/15.
  */
@@ -20,10 +18,10 @@ public class LoginCommand implements Command {
     }
 
     @Override
-    public void execute() {
+    public void execute() throws CommandException {
         Session session = client.session();
         PreparedStatement statement = session.prepare(
-                String.format("SELECT FROM %s WHERE username=?", USER_TABLE)
+                String.format("SELECT * FROM %s WHERE username=?", USER_TABLE)
         );
         BoundStatement boundStatement = new BoundStatement(statement);
         ResultSet resultSet = session.execute(boundStatement.bind(username));
@@ -40,5 +38,6 @@ public class LoginCommand implements Command {
         }
 
         client.username(username);
+        client.state(TweetClient.STATE_OK);
     }
 }

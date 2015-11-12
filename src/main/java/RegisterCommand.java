@@ -1,5 +1,6 @@
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import org.mindrot.jbcrypt.BCrypt;
 
@@ -35,10 +36,23 @@ public class RegisterCommand implements Command {
     }
 
     @Override
-    public void execute() {
+    public void execute() throws CommandException {
         Session session = client.session();
+        BoundStatement checkUserStatement = new BoundStatement(
+                session.prepare("SELECT COUNT(*) FROM users WHERE username=?")
+        );
+        Row checkResult = session.execute(checkUserStatement.bind(username)).one();
+
+        if (checkResult != null) {
+            if (checkResult.getLong("count") == 1) {
+                throw new CommandException(String.format("User with name %s already exists!", username));
+            }
+        } else {
+            throw new CommandException("Cannot check user existence!");
+        }
+
         PreparedStatement statement = session.prepare(
-                String.format("INSERT INTO %s (username, password) VALUES (?. ?)", USER_TABLE)
+                String.format("INSERT INTO %s (username, password) VALUES (?, ?)", USER_TABLE)
         );
 
         BoundStatement boundStatement = new BoundStatement(statement);

@@ -1,0 +1,11 @@
+If no "/" supplied, it is assumed that you want to send a tweet.
+
+Available commands:
+/tweet       <tweet>          sends a tweet
+/follow      <username>       follows a user
+/show        (tweets|followers|timeline) [username=self] show a user's tweet or timeline
+/help        shows this help message
+/login       login to an existing user
+/register    registers a new user
+/logout      logout the current user
+/exit        quits the program

@@ -9,7 +9,7 @@ public class LogoutCommand implements Command {
     }
 
     @Override
-    public void execute() {
+    public void execute() throws CommandException {
         client.state(TweetClient.STATE_NOUSER);
         client.username("");
     }

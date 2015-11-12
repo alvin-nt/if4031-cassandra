@@ -2,8 +2,11 @@ import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
+import com.datastax.driver.core.utils.UUIDs;
 
+import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Created by alvin on 11/12/15.
@@ -43,21 +46,21 @@ public class ShowCommand implements CommandWithResult {
     }
 
     @Override
-    public void execute() {
+    public void execute() throws CommandException {
         Session session = client.session();
         BoundStatement statement = null;
 
         switch (showType) {
             case SHOW_TIMELINE:
                 // by default shows only 50 latest tweets on the timeline
-                statement = new BoundStatement(session.prepare("SELECT * FROM userline WHERE username=? LIMIT 50"));
+                statement = new BoundStatement(session.prepare("SELECT * FROM userline WHERE username=? ORDER BY time DESC LIMIT 50"));
                 break;
             case SHOW_FOLLOWERS:
                 statement = new BoundStatement(session.prepare("SELECT * FROM followers WHERE username=?"));
                 break;
             case SHOW_TWEETS:
                 // by default shows only 50 tweets
-                statement = new BoundStatement(session.prepare("SELECT * FROM tweets WHERE username=? LIMIT 50"));
+                statement = new BoundStatement(session.prepare("SELECT * FROM timeline WHERE username=? ORDER BY time DESC LIMIT 50"));
                 break;
         }
         assert(statement != null);
@@ -81,14 +84,16 @@ public class ShowCommand implements CommandWithResult {
                 builder.append("follower,since").append('\n');
                 break;
             case SHOW_TWEETS:
-                builder.append("tweet_id,body").append('\n');
+                builder.append("tweet_id,timestamp,body").append('\n');
                 break;
             case SHOW_TIMELINE:
-                builder.append("tweet_id,username,body").append('\n');
+                builder.append("tweet_id,username,timestamp,body").append('\n');
                 break;
         }
 
         for (Row row: results) {
+            Row tweet;
+
             switch(showType) {
                 case SHOW_FOLLOWERS:
                     builder.append(row.getString("follower")).append(",")
@@ -96,28 +101,39 @@ public class ShowCommand implements CommandWithResult {
                             .append('\n');
                     break;
                 case SHOW_TWEETS:
+                    tweet = fetchTweet(row.getUUID("tweet_id"));
+
                     builder.append(row.getUUID("tweet_id")).append(",")
-                            .append(row.getString("body"))
+                            .append(getDateFromUuid(row.getUUID("time"))).append(",")
+                            .append(tweet.getString("body"))
                             .append("\n");
                     break;
                 case SHOW_TIMELINE:
-                    // fetch the tweet first
-                    BoundStatement tweetStatement = new BoundStatement(
-                            client.session().prepare("SELECT * FROM tweets WHERE tweet_id=?")
-                    );
-                    Row tweet = client.session()
-                            .execute(tweetStatement.bind(row.getUUID("tweet_id")))
-                            .one();
+                    tweet = fetchTweet(row.getUUID("tweet_id"));
 
                     // print it out
-                    builder.append(row.getUUID("tweet_id")).append(",")
-                            .append(row.getString("username")).append(",")
-                            .append(tweet == null ? "null" : tweet.getString("body"))
+                    builder.append(row.getUUID("tweet_id")).append(',')
+                            .append(tweet.getString("username")).append(',')
+                            .append(getDateFromUuid(row.getUUID("time"))).append(',')
+                            .append(tweet.getString("body") == null ? "null" : tweet.getString("body"))
                             .append("\n");
                     break;
             }
         }
 
         return builder.toString();
+    }
+
+    private Row fetchTweet(UUID tweetId) {
+        BoundStatement tweetStatement = new BoundStatement(
+                client.session().prepare("SELECT * FROM tweets WHERE tweet_id=?")
+        );
+        return client.session()
+                .execute(tweetStatement.bind(tweetId))
+                .one();
+    }
+
+    private Date getDateFromUuid(UUID uuid) {
+        return new Date(UUIDs.unixTimestamp(uuid));
     }
 }
